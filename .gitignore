@@ -23,3 +23,7 @@ Cargo.lock
 # ignore all data files
 **/*data.txt
 !**/test-data.txt
+
+# ignore all pngs and dot files, they might indicate a graph and a solution
+**/*.png
+**/*.dot

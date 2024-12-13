@@ -28,17 +28,25 @@ for ($i = 0; $i -lt $data.Length; $i+=4) {
     
     # Convert x and y to integers if they are very close to integers
     # NOTE: We have to bump up the threshold because we are dealing with large data
-    if ($x % 1 -lt 0.01) {
-        $x = [long][math]::Floor($x)
-    }
-    if ($y % 1 -lt 0.01) {
-        $y = [long][math]::Floor($y)
-    }
-    if ($x % 1 -gt 0.99) {
-        $x = [long][math]::Ceiling($x)
-    }
-    if ($y % 1 -gt 0.99) {
-        $y = [long][math]::Ceiling($y)
+    # if ($x % 1 -lt 0.01) {
+    #     $x = [long][math]::Floor($x)
+    # }
+    # if ($y % 1 -lt 0.01) {
+    #     $y = [long][math]::Floor($y)
+    # }
+    # if ($x % 1 -gt 0.99) {
+    #     $x = [long][math]::Ceiling($x)
+    # }
+    # if ($y % 1 -gt 0.99) {
+    #     $y = [long][math]::Ceiling($y)
+    # }
+
+    # Instead of rounding, verify the equation with rounded values
+    $x = [long][math]::Round($x)
+    $y = [long][math]::Round($y)
+
+    if ($prize[0] -ne ($A[0] * $x + $B[0] * $y) -or $prize[1] -ne ($A[1] * $x + $B[1] * $y)) {
+        continue
     }
 
     if ($x % 1 -ne 0 -or $y % 1 -ne 0) {

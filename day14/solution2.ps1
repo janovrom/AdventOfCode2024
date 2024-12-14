@@ -45,45 +45,12 @@ for ($i = 0; $i -lt $totalSeconds; $i+=1) {
         continue
     }
 
+    # We need to notice that every 101 frames, there is a pattern. 
+    # And the same goes for 103. These get closer together and
+    # when they meet, we have the solution.
     [System.Drawing.Bitmap]$bitmap = New-Object System.Drawing.Bitmap($width, $height)
     $robots | ForEach-Object {
         $bitmap.SetPixel($_.x, $_.y, [System.Drawing.Color]::FromArgb(255, 255, 255, 255))
     }
     $bitmap.Save("frames\frame$i.png")
 }
-
-# $robots | ForEach-Object {
-#     Write-Output "p=($($_.x),$($_.y)) v=($($_.vx),$($_.vy))"
-# }
-
-$middlex = [int][Math]::Floor($width / 2)
-$middley = [int][Math]::Floor($height / 2)
-$tl = 0
-$tr = 0
-$bl = 0
-$br = 0
-$robots | ForEach-Object {
-    if ($_.x -lt $middlex) {
-        # That means the robot is on the left side
-        if ($_.y -lt $middley) {
-            # That means the robot is on the top left side
-            $tl += 1
-        } elseif ($_.y -gt $middley) {
-            # That means the robot is on the bottom left side
-            $bl += 1
-        }
-    } elseif ($_.x -gt $middlex) {
-        # That means the robot is on the right side
-        if ($_.y -lt $middley) {
-            # That means the robot is on the top right side
-            $tr += 1
-        } elseif ($_.y -gt $middley) {
-            # That means the robot is on the bottom right side
-            $br += 1
-        }
-    }
-}
-
-$mul = $tl * $tr * $bl * $br
-Write-Host $mul
-Set-Clipboard $mul

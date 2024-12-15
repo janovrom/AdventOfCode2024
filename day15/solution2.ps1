@@ -136,9 +136,48 @@ function MoveVertically($x, $y, $matrix, $dx, $dy) {
 
 function MoveRobot($x, $y, $matrix, $dx, $dy) {
     if ($dx -eq 0) {
-        return MoveHorizontally $x $y $matrix $dx $dy
-    } else {
-        return MoveVertically $x $y $matrix $dx $dy
+        $moved = MoveHorizontally $x $y $matrix $dx $dy
+    }
+    else {
+        $moved = MoveVertically $x $y $matrix $dx $dy
+    }
+
+    if ($moved) {
+        return ($x + $dx), ($y + $dy)
+    }
+    else {
+        return $x, $y
+    }
+}
+
+function Draw($matrix, $rx, $ry) {
+    $x = 0
+    foreach ($row in $matrix) {
+        $y = 0
+        foreach ($r in $row) {
+            if ($rx -eq $x -and $ry -eq $y) {
+                Write-Host -NoNewline '@'
+                $y += 1
+                continue
+            }
+        
+            if ($r -eq $empty) {
+                Write-Host -NoNewline '.'
+            }
+            elseif ($r -eq $wall) {
+                Write-Host -NoNewline '#'
+            }
+            elseif ($r -eq $boxLeft) {
+                Write-Host -NoNewline '['
+            }
+            elseif ($r -eq $boxRight) {
+                Write-Host -NoNewline ']'
+            }
+
+            $y += 1
+        }
+        $x += 1
+        Write-Host ""
     }
 }
 
@@ -151,7 +190,7 @@ $empty = [int]0
 $wall = [int]1
 $boxLeft = [int]2
 $boxRight = [int]3
-for (;$i -lt $data.Length; $i++) {
+for (; $i -lt $data.Length; $i++) {
     $line = $data[$i]
 
     if ([string]::IsNullOrWhiteSpace($line)) {
@@ -159,26 +198,30 @@ for (;$i -lt $data.Length; $i++) {
     }
 
     $row = @($empty) * ($line.Length * 2)
-    $matrix += ,$row
+    $matrix += , $row
 
     $j = 0
-    foreach($c in $line.ToCharArray() | % { "$_" }) {
+    foreach ($c in $line.ToCharArray() | % { "$_" }) {
         $j0 = $j * 2
         $j1 = $j0 + 1
         if ($c -eq '.') {
             $row[$j0] = $empty
             $row[$j1] = $empty
-        } elseif ($c -eq '#') {
+        }
+        elseif ($c -eq '#') {
             $row[$j0] = $wall
             $row[$j1] = $wall
-        } elseif ($c -eq 'O') {
+        }
+        elseif ($c -eq 'O') {
             $row[$j0] = $boxLeft
             $row[$j1] = $boxRight
-        } elseif ($c -eq '@') {
+        }
+        elseif ($c -eq '@') {
             $rx = $i
             $ry = $j0
             $row[$j] = $empty
-        } else {
+        }
+        else {
             exit("Invalid character: $c")
         }
         $j += 1
@@ -205,13 +248,16 @@ for (; $i -lt $data.Length; $i++) {
         if ($instruction -eq '^') {
             $dx = -1
             $dy = 0
-        } elseif ($instruction -eq 'v') {
+        }
+        elseif ($instruction -eq 'v') {
             $dx = 1
             $dy = 0
-        } elseif ($instruction -eq '<') {
+        }
+        elseif ($instruction -eq '<') {
             $dx = 0
             $dy = -1
-        } elseif ($instruction -eq '>') {
+        }
+        elseif ($instruction -eq '>') {
             $dx = 0
             $dy = 1
         }
@@ -220,71 +266,16 @@ for (; $i -lt $data.Length; $i++) {
         $newx = $rx + $dx
         $newy = $ry + $dy
 
-        if ((MoveRobot $rx $ry $matrix $dx $dy) -eq $true) {
-            $rx = $newx
-            $ry = $newy
-        }
+        $rx, $ry = MoveRobot $rx $ry $matrix $dx $dy
 
-        # Write-Host "****************************"
-        # Write-Host "Move $instruction to $rx $ry"
-        # $x = 0
-        # foreach ($row in $matrix) {
-        #     $y = 0
-        #     foreach ($r in $row) {
-        #         if ($rx -eq $x -and $ry -eq $y) {
-        #             Write-Host -NoNewline '@'
-        #             $y += 1
-        #             continue
-        #         }
-                
-        #         if ($r -eq $empty) {
-        #             Write-Host -NoNewline '.'
-        #         } elseif ($r -eq $wall) {
-        #             Write-Host -NoNewline '#'
-        #         } elseif ($r -eq $boxLeft) {
-        #             Write-Host -NoNewline '['
-        #         }  elseif ($r -eq $boxRight) {
-        #             Write-Host -NoNewline ']'
-        #         }
-
-        #         $y += 1
-        #     }
-        #     $x += 1
-        #     Write-Host ""
-        # }
-        # Write-Host "****************************"
+        # Draw $matrix $rx $ry
     }
 }
 
+Draw $matrix $rx $ry
 
 $x = 0
-foreach ($row in $matrix) {
-    $y = 0
-    foreach ($r in $row) {
-        if ($rx -eq $x -and $ry -eq $y) {
-            Write-Host -NoNewline '@'
-            $y += 1
-            continue
-        }
-        
-        if ($r -eq $empty) {
-            Write-Host -NoNewline '.'
-        } elseif ($r -eq $wall) {
-            Write-Host -NoNewline '#'
-        } elseif ($r -eq $boxLeft) {
-            Write-Host -NoNewline '['
-        }  elseif ($r -eq $boxRight) {
-            Write-Host -NoNewline ']'
-        }
-
-        $y += 1
-    }
-    $x += 1
-    Write-Host ""
-}
-
-$x = 0
-[long]$sum = 0
+$sum = 0
 foreach ($row in $matrix) {
     $y = 0
     foreach ($r in $row) {

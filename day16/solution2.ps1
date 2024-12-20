@@ -150,7 +150,7 @@ $path = [System.Collections.Generic.HashSet[Object]]::new()
 GetShortestPath $end.X $end.Y $path
 
 # Print the path
-# for ($I = 0; $i -lt $data.Length; $i++) {
+# for ($i = 0; $i -lt $data.Length; $i++) {
 #     $row = $data[$i]
 #     for ($j = 0; $j -lt $row.Length; $j++) {
 #         $c = $row[$j]

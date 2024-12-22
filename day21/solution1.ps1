@@ -1,6 +1,6 @@
 . ".\data-loader.ps1"
 
-$data = LoadTestData
+$data = LoadDataPart2
 
 # For any keyborad, the robot starts at A.
 # The robot can move up, down, left, or right.
@@ -15,97 +15,140 @@ $data = LoadTestData
 # X ^ A
 # < V >
 
-function CodeToMovement($codes) {
-    # Get the movement pattern when starting at A
-    # The robot can't move to X
-    # Result is a sequence of movements that visually corresponds to the keyboard
-    # I'll always move up first, then horizontally
-
-    $lookup = @{
-        "AA" = ''
-        "A0" = '<'
-        "A1" = '^<<'
-        "A2" = '^<'
-        "A3" = '^'
-        "A4" = '^^<<'
-        "A5" = '^^<'
-        "A6" = '^^'
-        "A7" = '^^^<<'
-        "A8" = '^^^<'
-        "A9" = '^^^'
-        "01" = '^<'
-        "02" = '^'
-        "03" = '^>'
-        "04" = '^^<'
-        "05" = '^^'
-        "06" = '^^>'
-        "07" = '^^^<'
-        "08" = '^^^'
-        "09" = '^^^>'
-        "12" = '>'
-        "13" = '>>'
-        "14" = '^'
-        "15" = '>^'
-        "16" = '^>>'
-        "17" = '^^'
-        "18" = '^^>'
-        "19" = '^^>>'
-        "23" = '>'
-        "24" = "^<"
-        "25" = '^'
-        "26" = '^>'
-        "27" = '^^<'
-        "28" = '^^'
-        "29" = '^^>'
-        "34" = '^<<'
-        "35" = '^<'
-        "36" = '^'
-        "37" = '^^<<'
-        "38" = '^^<'
-        "39" = '^^'
-        "45" = '>'
-        "46" = '>>'
-        "47" = '^'
-        "48" = '>^'
-        "49" = '^>>'
-        "56" = '>'
-        "57" = '^<'
-        "58" = '^'
-        "59" = '^>'
-        "67" = '^<<'
-        "68" = '^<'
-        "69" = '^'
-        "78" = '>'
-        "79" = '>>'
-        "89" = '>'
+function FloodFill($x, $y, $data, $steps, $visited) {
+    if ($x -lt 0 -or $x -ge $data.Length -or $y -lt 0 -or $y -ge $data[0].Length) {
+        return
     }
 
-    $result = ""
-    $current = 'A'
-    $code = $code -split '' | Where-Object { $_ -ne '' }
-    foreach ($c in $code) {
-        $key = $current + $c
-        # Lookup the key and the move to A
+    if ($data[$x][$y] -eq 'X') {
+        return
+    }
 
-        if ($lookup.ContainsKey($key)) {
-            $movement = $lookup[$key]
+    if ($visited[$x][$y] -le $steps) {
+        return
+    }
+
+    $visited[$x][$y] = $steps
+
+    $steps += 1
+    FloodFill ($x - 1) $y $data $steps $visited
+    FloodFill ($x + 1) $y $data $steps $visited
+    FloodFill $x ($y - 1) $data $steps $visited
+    FloodFill $x ($y + 1) $data $steps $visited
+}
+
+function IndexOf($data, $value) {
+    for ($i = 0; $i -lt $data.Length; $i++) {
+        for ($j = 0; $j -lt $data[$i].Length; $j++) {
+            if ($data[$i][$j] -eq $value) {
+                return $i, $j
+            }
         }
-        else {
-            $key = $c + $current
-            if (-not $lookup.ContainsKey($key)) {
-                throw "Invalid key $key"
+    }
+
+    throw "Value $value not found"
+}
+
+function GetAllShortestPaths($x, $y, $data, $steps, $visited, $path, $pathSet) {
+    if ($x -lt 0 -or $x -ge $data.Length -or $y -lt 0 -or $y -ge $data[0].Length) {
+        return
+    }
+
+    if ($data[$x][$y] -eq 'X') {
+        return
+    }
+
+    if ($visited[$x][$y] -ne $steps) {
+        return
+    }
+
+    if ($visited[$x][$y] -eq 0) {
+        # We reached the end but we calculated from end
+        $path = ReverseMovement $path
+        [void]$pathSet.Add($path)
+        return
+    }
+
+    $steps -= 1
+
+    GetAllShortestPaths ($x - 1) $y $data $steps $visited ($path + '^') $pathSet
+    GetAllShortestPaths ($x + 1) $y $data $steps $visited ($path + 'v') $pathSet
+    GetAllShortestPaths $x ($y - 1) $data $steps $visited ($path + '<') $pathSet
+    GetAllShortestPaths $x ($y + 1) $data $steps $visited ($path + '>') $pathSet
+}
+
+function FloodFillMovementKeyboard() {
+    $keyboard = @(
+        @('X', '^', 'A'),
+        @('<', 'v', '>')
+    )
+
+    $letters = @('A', 'v', '^', '<', '>')
+
+    $lookup = @{}
+
+    foreach ($l0 in $letters) {
+        foreach ($l1 in $letters) {
+            $x0, $y0 = IndexOf $keyboard $l0
+            $x1, $y1 = IndexOf $keyboard $l1
+
+            $visited = @(
+                @(-1, 100, 100),
+                @(100, 100, 100)
+            )
+
+            FloodFill $x0 $y0 $keyboard 0 $visited
+
+            $steps = $visited[$x1][$y1]
+            $pathSet = New-Object System.Collections.Generic.HashSet[string]
+            GetAllShortestPaths $x1 $y1 $keyboard $steps $visited "" $pathSet
+            if ($pathSet.Count -eq 0) {
+                throw "No path found for $l0 $l1"
+            }
+            $lookup += @{"$l0$l1" = $pathSet}
+        }
+    }
+
+    return $lookup
+}
+
+function FloodFillKeyboard() {
+    $keyboard = @(
+        @('7', '8', '9'),
+        @('4', '5', '6'),
+        @('1', '2', '3'),
+        @('X', '0', 'A')
+    )
+
+    $letters = @('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A')
+
+    $lookup = @{}
+    foreach ($l0 in $letters) {
+        foreach ($l1 in $letters) {
+            if ($l0 -eq $l1) {
+                continue
             }
 
-            $movement = ReverseMovement $lookup[$key]
+            $x0, $y0 = IndexOf $keyboard $l0
+            $x1, $y1 = IndexOf $keyboard $l1
+
+            $visited = @(
+                @(100, 100, 100),
+                @(100, 100, 100),
+                @(100, 100, 100),
+                @(-1, 100, 100)
+            )
+
+            FloodFill $x0 $y0 $keyboard 0 $visited
+
+            $steps = $visited[$x1][$y1]
+            $pathSet = New-Object System.Collections.Generic.HashSet[string]
+            GetAllShortestPaths $x1 $y1 $keyboard $steps $visited "" $pathSet
+            $lookup += @{"$l0$l1" = $pathSet}
         }
-
-        $result += $movement
-        $result += 'A'
-
-        $current = $c
     }
 
-    return $result
+    return $lookup
 }
 
 function ReverseMovement($value) {
@@ -114,9 +157,9 @@ function ReverseMovement($value) {
     for ($i = $value.Length - 1; $i -ge 0; $i--) {
         $c = $value[$i]
         if ($c -eq '^') {
-            $result += 'V'
+            $result += 'v'
         }
-        elseif ($c -eq 'V') {
+        elseif ($c -eq 'v') {
             $result += '^'
         }
         elseif ($c -eq '<') {
@@ -133,50 +176,43 @@ function ReverseMovement($value) {
     return $result
 }
 
-function MovementToMovement($code) {
-    # For this lookup I'll always go down first, then horizontally
-    $lookup = @{
-        "AA" = ''
-        "A^" = '<'
-        "A<" = 'V<<'
-        "AV" = 'V<'
-        "A>" = 'V'
-        "^<" = 'V<'
-        "^V" = 'V'
-        "^>" = 'V>'
-        "<V" = '>'
-        "<>" = '>>'
-        "V>" = '>'
-        "<<" = ''
-        ">>" = ''
-        "VV" = ''
-        "^^" = ''
+function ShortestMovement($code, $codeLookup, $movementLookup, $depth, $visited) {
+    if ($depth -eq $global:data.searchDepth) {
+        return $code.Length
+    }
+
+    $cacheKey = "$code,$depth"
+    if ($visited.ContainsKey($cacheKey)) {
+        return $visited[$cacheKey]
     }
 
     $current = 'A'
-    $result = ""
+    $result = 0
     $code =  $code -split '' | Where-Object { $_ -ne '' }
     foreach ($c in $code) {
         $key = $current + $c
-        # Lookup the key and the move to A
+        if ($codeLookup.ContainsKey($key)) {
+            $movement = 1000000000000000
 
-        if ($lookup.ContainsKey($key)) {
-            $movement = $lookup[$key]
-        }
-        else {
-            $key = $c + $current
-            if (-not $lookup.ContainsKey($key)) {
-                throw "Invalid key $key"
+            foreach ($path in $codeLookup[$key]) {
+                $path += 'A'
+                
+                $shortestPath = ShortestMovement $path $movementLookup $movementLookup ($depth + 1) $visited $length
+                if ($movement -gt $shortestPath) {
+                    $movement = $shortestPath
+                }
             }
 
-            $movement = ReverseMovement $lookup[$key]
+            $result += $movement
         }
-
-        $result += $movement
-        $result += 'A'
+        else {
+            throw "Invalid key $key"
+        }
 
         $current = $c
     }
+
+    $visited[$cacheKey] = $result
 
     return $result
 }
@@ -184,7 +220,7 @@ function MovementToMovement($code) {
 function VisualizeMovement($movement) {
     $keyboard = @(
         @('X', '^', 'A'),
-        @('<', 'V', '>')
+        @('<', 'v', '>')
     )
 
     $x = 0
@@ -195,7 +231,7 @@ function VisualizeMovement($movement) {
         if ($c -eq '^') {
             $x--
         }
-        elseif ($c -eq 'V') {
+        elseif ($c -eq 'v') {
             $x++
         }
         elseif ($c -eq '<') {
@@ -226,7 +262,7 @@ function VisualizeCode($movement) {
         if ($c -eq '^') {
             $x--
         }
-        elseif ($c -eq 'V') {
+        elseif ($c -eq 'v') {
             $x++
         }
         elseif ($c -eq '<') {
@@ -241,17 +277,17 @@ function VisualizeCode($movement) {
     }
 }
 
+$codeLookup = FloodFillKeyboard
+$movementLookup = FloodFillMovementKeyboard
+
 $sum = 0
+$visited = New-Object 'System.Collections.Generic.Dictionary[string,long]'
 foreach ($code in $data.codes) {
-    $first = CodeToMovement $code
-    Write-Host (VisualizeCode $first -join '')
-    $second = MovementToMovement $first
-    Write-Host (VisualizeMovement $second -join '')
-    $third =  MovementToMovement $second
-    Write-Host (VisualizeMovement $third -join '')
-    Write-Host "$code : $first : $second : $third"
-    Write-Host "Length: $($third.Length) * $([int]$code.Substring(0, 3))"
-    $sum += $third.Length * [int]$code.Substring(0, 3)
+    $shortest = ShortestMovement $code $codeLookup $movementLookup 0 $visited
+
+    # Write-Host $shortestPath
+    Write-Host "Code: $code Length: $($shortest)"
+    $sum += $shortest * [long]$code.Substring(0, 3)
 }
 
 Write-Host $sum
